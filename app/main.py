@@ -4,11 +4,6 @@ from app.routers import users_router
 
 
 app = FastAPI()
-
-
-
-
-
 #models.Base.metadata.create_all(bind=engine)
 
 app.add_middleware(
