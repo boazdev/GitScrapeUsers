@@ -3,7 +3,7 @@ def create_github_url(user_str:str, min_repos:int = 5,page:int = 1):
     return url
 
 def create_github_headers() -> dict:
-    headers = headers = {
+    headers = {
   'authority': 'github.com',
   'accept': 'application/json',
   'accept-language': 'en-US,en;q=0.9,he;q=0.8',

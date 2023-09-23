@@ -6,6 +6,9 @@ from app.utils.github_utils import create_github_headers,create_github_url, user
 from app.service.github_service import get_users_by_url
 router = APIRouter(prefix="/users", tags=["users"])
 from app.schemas.options_schema import OptionsIn
+from app.service import users_service
+from app.database.db import get_db
+from app.schemas import user_schema
 import anyio
 import time
 @router.get("/", response_model=dict, status_code=200)
@@ -13,7 +16,7 @@ def get_github_users():
     return {"users":[1,2,3,4,5]}
 
 @router.post("/", response_model=dict, status_code=200)
-def save_github_users(options: OptionsIn):
+def start_scrape_github_users(options: OptionsIn):
     headers=create_github_headers()
     url = create_github_url("a",5,1)
     print(f"options recieved: {options}")
@@ -22,6 +25,17 @@ def save_github_users(options: OptionsIn):
     users_lst = users_from_json(users_json)
     print(users_lst)
     return {"users_added":100,"users_current":300}
+
+@router.get("/username/{username}",response_model=user_schema.User, status_code=200)
+def get_user_by_username(username:str, db: Session = Depends(get_db)):
+    return users_service.get_user_by_username(db,username)
+
+
+@router.post("/{user}",response_model= user_schema.User,status_code=201)
+def create_user(username:user_schema.UserCreate, db: Session = Depends(get_db)):
+    resp = users_service.create_user(db,username)
+    if resp==None:
+        raise HTTPException(400,"Username already exist")
 
 async def fake_video_streamer():
     for i in range(1, 11):
@@ -38,6 +52,7 @@ def fake_data_streamer():
 @router.get("/stream-data")
 async def stream_data():
     return StreamingResponse(fake_video_streamer(), media_type='text/event-stream')
+
 
 """ 
 @router.post("/createUser", response_model=UserSchema.BaseUser)
