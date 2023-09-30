@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+data/heb2eng.csv
 # C extensions
 *.so
 *readme.txt

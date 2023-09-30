@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 class OptionsIn(BaseModel):
-    min_repos : str = 5 
+    min_repos : str = 1 
     """
     The minimum number of repositories a user must have to be added to the database.
     Default is 5.

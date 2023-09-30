@@ -11,9 +11,14 @@ from app.database.db import get_db
 from app.schemas import user_schema
 import anyio
 import time
+
 @router.get("/", response_model=dict, status_code=200)
-def get_github_users():
-    return {"users":[1,2,3,4,5]}
+def get_db_github_users(skip: int = 0, limit: int = 100,db:Session=Depends(get_db)):
+    usernames_lst : list[user_schema.User] = users_service.get_users(db, skip,limit)
+    for user in usernames_lst:
+        print(f"username: {user.username} type:{type(usernames_lst)}")
+    usernames_lst_serial = list(map(lambda x:{x.id, x.username},usernames_lst))
+    return {"users":usernames_lst_serial, "number_db_users":users_service.get_num_users(db)}
 
 @router.post("/", response_model=dict, status_code=200)
 def start_scrape_github_users(options: OptionsIn):
@@ -36,6 +41,14 @@ def create_user(username:user_schema.UserCreate, db: Session = Depends(get_db)):
     resp = users_service.create_user(db,username)
     if resp==None:
         raise HTTPException(400,"Username already exist")
+    return resp
+
+@router.delete("/",response_model=str, status_code=200)
+def delete_all_users(db:Session=Depends(get_db)):
+    resp = users_service.delete_all(db)
+    return resp
+
+
 
 async def fake_video_streamer():
     for i in range(1, 11):
