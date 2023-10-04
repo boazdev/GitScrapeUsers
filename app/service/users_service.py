@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func #select, join
+from sqlalchemy import func,text #select, join
 from typing import Optional
 from app.models.user_model import User
 from app.schemas import user_schema
@@ -23,6 +23,7 @@ def create_user(db: Session, user: user_schema.UserCreate) -> Optional[user_sche
         db.refresh(db_user)
         return db_user
     except IntegrityError as e: #duplicate username 
+        db.rollback()
         return None
 
 def create_users_from_lst(db:Session, user_lst : list[str])->int:
@@ -38,8 +39,10 @@ def create_users_from_lst(db:Session, user_lst : list[str])->int:
             db.refresh(db_user)
             num_users_added+=1
         except IntegrityError as e: #duplicate username 
+            db.rollback()
             print(f"error adding user , user already exists: {user_str}")
         except Exception as e:
+            db.rollback()
             print(f"error adding user {user_str}: {e.__str__()}")
     return num_users_added
 
@@ -54,6 +57,8 @@ def get_num_users(db:Session):
 def delete_all(db:Session):
     try:
         db.query(User).delete()
+        reset_cmd = text("ALTER SEQUENCE users_id_seq RESTART WITH 1;")
+        db.execute(reset_cmd)
         db.commit()
         return "deleted"
     except Exception as e:
