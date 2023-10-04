@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends,HTTPException, Response
-from app.schemas.options_schema import OptionsIn
+from app.schemas.options_schema import OptionsIn,OptionsHebrew
 from app.schemas.user_schema import UserCreate
 from sqlalchemy.orm import Session
 from app.database.db import get_db
@@ -28,23 +28,14 @@ def start_scrape_github_users(options: OptionsIn):
     return {"started":"true"}
 
 @router.post("/start-hebrew",response_model=dict, status_code=200)
-def start_scrape_hebrew_users(options: OptionsIn, db: Session = Depends(get_db)):
+def start_scrape_hebrew_users(options: OptionsHebrew, db: Session = Depends(get_db)):
     hebrew_name_lst = file_service.extract_names_from_file("app\data\heb2eng.csv")
     print(f"number of hebrew names found in csv file: {len(hebrew_name_lst)}") #there should be at least 6346 rows in the file
     headers=create_github_headers()
     num_users_added=0
     for name in hebrew_name_lst:
-        """ url_first_page = create_github_url(name,min_repos=0,page=1)
-        curr_page=1
-        users_json = github_service.try_get_users_by_url(url_first_page,headers,delay_seconds=10.0,max_retry=6)
-        num_pages = users_json["payload"]["page_count"]
-        username_lst = users_from_json(users_json)
-        num_users_added+=users_service.create_users_from_lst(db,username_lst)
-        print(f"num users added after page 1: {num_users_added}")
-        time.sleep(float(options.delay)) """
         i=0
         num_pages=1
-        #for i in range(2,num_pages):
         while(i<num_pages):
             url = create_github_url(name,min_repos=0,page=i+1)
             users_json = github_service.try_get_users_by_url(url,headers,delay_seconds=10.0,max_retry=6)
@@ -58,6 +49,16 @@ def start_scrape_hebrew_users(options: OptionsIn, db: Session = Depends(get_db))
             time.sleep(float(options.delay))
             i+=1
     return {"users_added":num_users_added}
+
+@router.post("/sort_heb_file", response_model=dict, status_code=200)
+def sort_heb_file():
+    hebrew_name_lst = file_service.extract_names_from_file("app\data\heb2eng.csv")
+    sorted_list = sorted(list(set(name.lower() for name in hebrew_name_lst)))#sorted([name.lower() for name in hebrew_name_lst])
+
+    data = {"hebrew_names": sorted_list}
+    file_path = "sorted_names.json"
+    file_service.write_json_data("app\data\heb_names.json",data)
+    return {"sorted":"true"}
 
 @router.post("/stop", response_model=dict, status_code=200)
 def stop_scrape_github_users():

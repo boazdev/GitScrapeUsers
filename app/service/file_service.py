@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 
 def extract_names_from_file(file_path):
     names_list = []
@@ -20,3 +21,27 @@ def extract_names_from_file(file_path):
         print(f"An error occurred: {str(e)}")
 
     return names_list
+
+def write_json(file_path, key, value):
+    file_path = os.path.join(sys.path[0],file_path)
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        data = {}
+    data[key] = value
+
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
+
+def write_json_data(file_path, input_data):
+    file_path = os.path.join(sys.path[0],file_path)
+    """ try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        data = {} """
+    
+    
+    with open(file_path, 'w') as file:
+        json.dump(input_data, file, indent=4)
