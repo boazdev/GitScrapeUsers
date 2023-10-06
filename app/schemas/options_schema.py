@@ -8,7 +8,8 @@ class OptionsIn(BaseModel):
     """
     delay: int = 0 #delay between requests to github
     max_users: int = 10000  #maxium number of users to scan
-
+    prefix_str : str = ""
+    max_string_size : int = 3
 class OptionsHebrew(BaseModel):
     start_name: str = None #start the scraping from where we left off
     delay:  int = 0 # seconds

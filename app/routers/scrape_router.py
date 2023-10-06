@@ -4,29 +4,20 @@ from app.schemas.user_schema import UserCreate
 from app.schemas.profile_schema import Profile
 from sqlalchemy.orm import Session
 from app.database.db import get_db
-
+from app.utils.bruteforce_utils import *
 from app.utils.github_utils import *
 from app.service import github_service, file_service, users_service, profiles_service
 import time
 router = APIRouter(prefix="/scrape", tags=["github users scraper"])
 
-@router.post("/start", response_model=dict, status_code=200) #todo: use app.state BRUTEFORCE
-def start_scrape_github_users(options: OptionsIn):
-    headers=create_github_headers()
-    url = create_github_url("a",min_repos=options.min_repos,page=1)
-    users_scanned = 0
-    curr_page=1
-    while(users_scanned<options.max_users):
-        users_json = github_service.try_get_users_by_url(url,headers,delay_seconds=10.0,max_retry=6)
-        if(users_json==None):
-            return {"error":f"error scraping users page: {curr_page}"}
-        num_pages = users_json["payload"]["page_count"]
-        print(f'users scanned: {users_from_json(users_json)} num scanned: {users_scanned+10}')
-        users_scanned+=10
-        curr_page+=1
-        url = create_github_url("a",min_repos=options.min_repos,page=curr_page)
-        time.sleep(float(options.delay))
-    return {"started":"true"}
+@router.post("/start-bruteforce", response_model=dict, status_code=200) #todo: use app.state BRUTEFORCE
+def start_scrape_github_users(options: OptionsIn, db: Session = Depends(get_db)):
+    num_users_added = 0
+    for str_lst in bruteforce_lst_generator(options.prefix_str,options.max_string_size):
+        num_users_added += scrape_from_str_lst(str_lst=str_lst,is_fullname=False,db=db,options=options)["users_added"]
+        if num_users_added >= options.max_users:
+            return {"num_users_added":num_users_added}
+    return {"num_users_added":num_users_added}
 
 @router.post("/start-hebrew",response_model=dict, status_code=200)
 def start_scrape_hebrew_users(options: OptionsHebrew, db: Session = Depends(get_db)):
@@ -39,9 +30,9 @@ def start_scrape_hebrew_users(options: OptionsHebrew, db: Session = Depends(get_
 @router.post("/start-linkedin",response_model=dict, status_code=200)
 def start_scrape_linkedin_users(options: OptionsHebrew, db: Session = Depends(get_db)):
     profiles_list:Profile = profiles_service.get_linkedin_profiles(db)
-    profiles_list = list(map(lambda profile: profile.name, profiles_list))
-    scrape_from_str_lst(str_lst=profiles_list,is_fullname=True,db=db,options=options)
-    return {"users_added":0}
+    profiles_list = list(map(lambda profile: profile.name, profiles_list)) #todo:remove special characters from name, handle cases where fullname contains three strings
+    users_added = scrape_from_str_lst(str_lst=profiles_list,is_fullname=True,db=db,options=options)
+    return users_added
 
 @router.post("/sort_heb_file", response_model=dict, status_code=200)
 def sort_heb_file():
@@ -82,3 +73,6 @@ def scrape_from_str_lst(str_lst:list[str], is_fullname:bool, db:Session,options)
             time.sleep(float(options.delay))
             i+=1
     return {"users_added":num_users_added}
+
+def create_bruteforce_list():
+    pass

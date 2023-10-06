@@ -41,10 +41,10 @@ def create_user(username:user_schema.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(400,"Username already exist")
     return resp
 
-@router.delete("/",response_model=str, status_code=200)
+""" @router.delete("/",response_model=str, status_code=200)
 def delete_all_users(db:Session=Depends(get_db)):
     resp = users_service.delete_all(db)
-    return resp
+    return resp """
 
 
 
