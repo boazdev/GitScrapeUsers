@@ -1,5 +1,9 @@
-def create_github_url(user_str:str, min_repos:int = 5,page:int = 1):
+def create_github_url(user_str:str, min_repos:int = 1,page:int = 1):
     url = f"https://github.com/search?q={user_str}+in%3Auser+repos%3A%3E{min_repos}&type=users&ref=advsearch&s=repositories&o=desc&p={page}"
+    return url
+
+def create_github_fullname_url(firstname:str, lastname:str, min_repos:int = 1,page:int = 1):
+    url = f"https://github.com/search?q={firstname}+in%3Auser+AND+{lastname}+in%3Auser+repos%3A%3E{min_repos}&type=users&ref=advsearch&s=repositories&o=desc&p={page}"
     return url
 
 def create_github_headers() -> dict:

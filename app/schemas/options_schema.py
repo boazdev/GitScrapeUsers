@@ -11,7 +11,7 @@ class OptionsIn(BaseModel):
 
 class OptionsHebrew(BaseModel):
     start_name: str = None #start the scraping from where we left off
-    delay:  int = 0
+    delay:  int = 0 # seconds
     max_users: int = 10000
 
 class KafkaRequest(BaseModel):

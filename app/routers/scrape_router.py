@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Depends,HTTPException, Response
 from app.schemas.options_schema import OptionsIn,OptionsHebrew
 from app.schemas.user_schema import UserCreate
+from app.schemas.profile_schema import Profile
 from sqlalchemy.orm import Session
 from app.database.db import get_db
 
 from app.utils.github_utils import *
-from app.service import github_service, file_service, users_service
+from app.service import github_service, file_service, users_service, profiles_service
 import time
 router = APIRouter(prefix="/scrape", tags=["github users scraper"])
 
-@router.post("/start", response_model=dict, status_code=200) #todo: use app.state 
+@router.post("/start", response_model=dict, status_code=200) #todo: use app.state BRUTEFORCE
 def start_scrape_github_users(options: OptionsIn):
     headers=create_github_headers()
     url = create_github_url("a",min_repos=options.min_repos,page=1)
@@ -29,26 +30,18 @@ def start_scrape_github_users(options: OptionsIn):
 
 @router.post("/start-hebrew",response_model=dict, status_code=200)
 def start_scrape_hebrew_users(options: OptionsHebrew, db: Session = Depends(get_db)):
-    hebrew_name_lst = file_service.extract_names_from_file("app\data\heb2eng.csv")
-    print(f"number of hebrew names found in csv file: {len(hebrew_name_lst)}") #there should be at least 6346 rows in the file
-    headers=create_github_headers()
-    num_users_added=0
-    for name in hebrew_name_lst:
-        i=0
-        num_pages=1
-        while(i<num_pages):
-            url = create_github_url(name,min_repos=0,page=i+1)
-            users_json = github_service.try_get_users_by_url(url,headers,delay_seconds=10.0,max_retry=6)
-            num_pages = users_json["payload"]["page_count"]
-            username_lst = users_from_json(users_json)
-            num_users_added+=users_service.create_users_from_lst(db,username_lst)
-            print(f"num users added after page {i}: {num_users_added}")
-            print(f"url: {url}, hebrew name:{name}")
-            if(num_users_added>options.max_users):
-                return {"users_added":num_users_added}
-            time.sleep(float(options.delay))
-            i+=1
-    return {"users_added":num_users_added}
+    hebrew_name_data = file_service.read_json("app\data\heb_names.json")#file_service.extract_names_from_file("app\data\heb2eng.csv")
+    hebrew_name_lst = hebrew_name_data["hebrew_names"]
+    print(f"number of hebrew names found in heb_names.json file: {len(hebrew_name_lst)}") #there should be at least 6346 rows in the file
+    return scrape_from_str_lst(str_lst=hebrew_name_lst,is_fullname=False,db=db,options=options)
+
+
+@router.post("/start-linkedin",response_model=dict, status_code=200)
+def start_scrape_linkedin_users(options: OptionsHebrew, db: Session = Depends(get_db)):
+    profiles_list:Profile = profiles_service.get_linkedin_profiles(db)
+    profiles_list = list(map(lambda profile: profile.name, profiles_list))
+    scrape_from_str_lst(str_lst=profiles_list,is_fullname=True,db=db,options=options)
+    return {"users_added":0}
 
 @router.post("/sort_heb_file", response_model=dict, status_code=200)
 def sort_heb_file():
@@ -63,3 +56,29 @@ def sort_heb_file():
 @router.post("/stop", response_model=dict, status_code=200)
 def stop_scrape_github_users():
     return {"stopped":"true"}
+
+def scrape_from_str_lst(str_lst:list[str], is_fullname:bool, db:Session,options)->dict:
+    
+    headers=create_github_headers()
+    num_users_added=0
+    for name in str_lst:
+        i=0
+        num_pages=1
+        while(i<num_pages):
+            if is_fullname:
+                print(name.split(' '))
+                [firstname,lastname] = name.split(' ')[0:2:1]
+                url = create_github_fullname_url(firstname,lastname,min_repos=0,page=i+1)
+            else:
+                url = create_github_url(name,min_repos=0,page=i+1)
+            users_json = github_service.try_get_users_by_url(url,headers,delay_seconds=10.0,max_retry=6) 
+            num_pages = users_json["payload"]["page_count"] # returns 0 if no user found
+            username_lst = users_from_json(users_json) # returns empty list if no user found
+            num_users_added+=users_service.create_users_from_lst(db,username_lst)
+            print(f"num users added after page {i+1}: {num_users_added}")
+            print(f"url: {url}, hebrew name:{name}, users:{username_lst}")
+            if(num_users_added>options.max_users):
+                return {"users_added":num_users_added}
+            time.sleep(float(options.delay))
+            i+=1
+    return {"users_added":num_users_added}

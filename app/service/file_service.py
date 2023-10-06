@@ -22,6 +22,15 @@ def extract_names_from_file(file_path):
 
     return names_list
 
+def read_json(file_path):
+    file_path = os.path.join(sys.path[0],file_path)
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            return data
+    except:
+        return None
+    
 def write_json(file_path, key, value):
     file_path = os.path.join(sys.path[0],file_path)
     try:

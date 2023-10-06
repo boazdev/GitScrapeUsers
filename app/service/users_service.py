@@ -8,8 +8,8 @@ from sqlalchemy.exc import IntegrityError
 def get_users(db: Session, skip: int = 0, limit: int = 100)->list[User]:
     return db.query(User).offset(skip).limit(limit).all()
 
-def get_users_by_id_greater_than(db: Session, constant: int, skip: int = 0, limit: int = 100)-> list[User]:
-    query = db.query(User).filter(User.id > constant)
+def get_users_by_id_greater_than(db: Session, id: int, skip: int = 0, limit: int = 100)-> list[User]:
+    query = db.query(User).filter(User.id > id)
     query = query.offset(skip).limit(limit)
     users = query.all()
     return users
