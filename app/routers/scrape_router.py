@@ -34,7 +34,7 @@ def start_scrape_linkedin_users(options: OptionsHebrew, db: Session = Depends(ge
     users_added = scrape_from_str_lst(str_lst=profiles_list,is_fullname=True,db=db,options=options)
     return users_added
 
-@router.post("/sort_heb_file", response_model=dict, status_code=200)
+""" @router.post("/sort_heb_file", response_model=dict, status_code=200)
 def sort_heb_file():
     hebrew_name_lst = file_service.extract_names_from_file("app\data\heb2eng.csv")
     sorted_list = sorted(list(set(name.lower() for name in hebrew_name_lst)))#sorted([name.lower() for name in hebrew_name_lst])
@@ -42,11 +42,8 @@ def sort_heb_file():
     data = {"hebrew_names": sorted_list}
     file_path = "sorted_names.json"
     file_service.write_json_data("app\data\heb_names.json",data)
-    return {"sorted":"true"}
+    return {"sorted":"true"} """
 
-@router.post("/stop", response_model=dict, status_code=200)
-def stop_scrape_github_users():
-    return {"stopped":"true"}
 
 def scrape_from_str_lst(str_lst:list[str], is_fullname:bool, db:Session,options)->dict:
     

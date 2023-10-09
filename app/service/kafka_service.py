@@ -19,7 +19,7 @@ class KafkaService:
         if not self.topic_exists(topic):
             self.producer.create_topics([topic])
 
-    def produce_usernames(self, topic, batch_size, wakeup_time, start_user_id, users_service):
+    def produce_usernames(self, topic, batch_size, wakeup_time, start_user_id):
         # Insert usernames into Kafka topic
         while True:
             usernames = ["1","2","3"] #users_service.get_usernames(start_user_id, batch_size)

@@ -1,6 +1,7 @@
 import requests
 import time
 from typing import Optional
+import asyncio #todo: fetch data with async httpx httpx.AsyncClient()
 def get_users_by_url(url:str,headers:dict) -> Optional[dict]:
     response = requests.get(url=url,headers=headers)
     if response.status_code!=200:
