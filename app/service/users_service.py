@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func,text #select, join
+from sqlalchemy import func,text,asc #select, join
 from typing import Optional
 from app.models.user_model import User
 from app.schemas import user_schema
@@ -10,7 +10,8 @@ def get_users(db: Session, skip: int = 0, limit: int = 100)->list[User]:
 
 def get_users_by_id_greater_than(db: Session, id: int, skip: int = 0, limit: int = 100)-> list[User]:
     query = db.query(User).filter(User.id >= id)
-    query = query.offset(skip).limit(limit)
+    query = query.order_by(asc(User.id))
+    query = query.limit(limit)
     users = query.all()
     return users
 

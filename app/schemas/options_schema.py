@@ -17,7 +17,7 @@ class OptionsHebrew(BaseModel):
 
 class KafkaRequest(BaseModel):
     batch_size: int = 1000
-    wakeup_time_minutes: int = 60
+    wakeup_time_minutes: int = 1
     start_user_id: int = 0
 
 
