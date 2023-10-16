@@ -1,17 +1,19 @@
 import time
-from confluent_kafka import Producer, KafkaError, Consumer
+from confluent_kafka import Producer, KafkaError, Consumer, serialization
 from confluent_kafka.admin import NewTopic, AdminClient
 from app.settings.config import get_settings
+
+import json
 class KafkaService:
     def __init__(self):
-        # Initialize Kafka producer configuration
-        settings = get_settings()
-        print(f"settings: {settings}")
         self.kafka_url = get_settings().kafka_url
         print("kafka_url: ", self.kafka_url)
         self.producer_config = {
             "bootstrap.servers": self.kafka_url,#"kafka:9092",  # Replace with your Kafka broker(s)
-            "client.id": "kafka_users_producer"
+            "client.id": "kafka_users_producer",
+            
+            #"value.serializer": serialization.Serializer(),#ConfluentKafkaSerializer(value_type='json'),
+            #"key.serializer": Ser(value_type='string'),
         }
         self.producer : Producer = Producer(**self.producer_config)
         self.admin_client : AdminClient = AdminClient(self.producer_config)
@@ -22,11 +24,11 @@ class KafkaService:
         metadata = self.admin_client.list_topics().topics
         return topic in metadata
 
-    def create_topic(self, topic_name):
+    def create_topic(self, topic_name,num_partitions):
         try:
             new_topic = NewTopic(
                 topic=topic_name,
-                num_partitions=1,  # Replace with the desired number of partitions
+                num_partitions=num_partitions,  # Replace with the desired number of partitions
                 replication_factor=1  # Replace with the desired replication factor
             )
             self.admin_client.create_topics([new_topic])
@@ -40,7 +42,10 @@ class KafkaService:
                 break
 
             for username in usernames:
-                self.producer.produce(topic, key=None, value=username)
+                json_value = {"username": username}
+                #json_value = json.dumps(username)
+                self.producer.produce(topic, key=username, value=username)
+                #self.producer.produce(topic, key=None, value=username)
                 self.producer.flush()
             break
             start_user_id += batch_size
