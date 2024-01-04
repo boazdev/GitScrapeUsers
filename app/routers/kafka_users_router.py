@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends,HTTPException, Response
-from app.schemas.options_schema import KafkaRequest
+from app.schemas.options_schema import KafkaModifyNumPartitionsRequest, KafkaRequest
+from app.service import kafka_service
 from app.service.kafka_service import KafkaService
 from app.service.users_service import get_users_by_id_greater_than
 from sqlalchemy.orm import Session
@@ -7,9 +8,9 @@ from app.database.db import get_db
 from app.models.user_model import User
 import time
 import traceback
-router  = APIRouter(prefix="/kafka_users",tags=["kafka_users producer"])
+""" router  = APIRouter(prefix="/kafka_users",tags=["kafka_users producer"]) """
 
-@router.post("/produce-users",response_model=dict,status_code=200)
+""" @router.post("/produce-users",response_model=dict,status_code=200) #TODO: num partitions of topics should be in constants python file
 def start_insert_kafka_users(request: KafkaRequest, db: Session = Depends(get_db)):
     try:
         kafka_service = KafkaService()
@@ -42,13 +43,24 @@ def start_insert_kafka_users(request: KafkaRequest, db: Session = Depends(get_db
 
     except Exception as e:
         print(traceback.print_exc())
-        raise HTTPException(status_code=500, detail=str(e))
-    
-@router.get("/consume-users",response_model=dict, status_code=200)
+        raise HTTPException(status_code=500, detail=str(e)) """
+
+""" @router.post("/modify-partitions",response_model=str,status_code=200)
+def modify_num_partiotions(request: KafkaModifyNumPartitionsRequest):
+    try:
+        kafka_service = KafkaService()
+        kafka_service.modify_topic_partitions("kafka_repositories",request.num_partitions)
+        return "modified"
+    except Exception as e:
+        print(e)
+        print(traceback.print_exc())
+        raise HTTPException(status_code=500, detail=str(e)) """
+
+""" @router.get("/consume-users",response_model=dict, status_code=200)
 def consume_kafka_users():
     kafka_service = KafkaService()
     if not kafka_service.topic_exists("kafka_users"):
             print("kafka topic kafka_users does not exist, creating topic")
             kafka_service.create_topic("kafka_users",1)
     kafka_service.consume_usernames("kafka_users",1500)
-    return {"message:":"consumed kafka users successfully"}
+    return {"message:":"consumed kafka users successfully"} """

@@ -1,6 +1,6 @@
 import time
 from confluent_kafka import Producer, KafkaError, Consumer, serialization
-from confluent_kafka.admin import NewTopic, AdminClient
+from confluent_kafka.admin import NewTopic, AdminClient, NewPartitions
 from app.settings.config import get_settings
 
 import json
@@ -31,7 +31,7 @@ class KafkaService:
                 num_partitions=num_partitions,  # Replace with the desired number of partitions
                 replication_factor=1  # Replace with the desired replication factor
             )
-            self.admin_client.create_topics([new_topic])
+            topics_dict: dict = self.admin_client.create_topics([new_topic])
         except KafkaError as e:
             print(e)
     def produce_usernames(self, topic,user_lst:list[str]):
@@ -50,6 +50,19 @@ class KafkaService:
             break
             start_user_id += batch_size
             time.sleep(wakeup_time * 60)  # Convert wakeup_time to seconds
+
+    def modify_topic_partitions(self, topic_name, new_partitions):
+        try:
+            topic_metadata = self.admin_client.list_topics().topics[topic_name]
+            current_partitions = len(topic_metadata.partitions)
+            if current_partitions < new_partitions:
+                new_parts = [NewPartitions(topic_name, int(new_partitions))]
+                self.admin_client.create_partitions(new_parts, validate_only=False)
+                print(f"number of partitions is lower than {new_partitions}, added required partitions")
+            else:
+                print(f"Current number of partitions ({current_partitions}) is greater than or equal to the new number of partitions ({new_partitions}).")
+        except KafkaError as e:
+            raise
 
     def consume_usernames(self, topic, max_users):
         consumer = Consumer({

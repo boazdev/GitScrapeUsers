@@ -15,7 +15,7 @@ app.add_middleware(
 )
 app.include_router(users_router.router)
 app.include_router(scrape_router.router)
-app.include_router(kafka_users_router.router)
+#app.include_router(kafka_users_router.router)
 @app.get('/health',status_code=200,response_model=str)
 def health_check():
     return "github users scraper api is running"

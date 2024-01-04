@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends,HTTPException, Response
-from app.schemas.options_schema import OptionsIn,OptionsHebrew
+from fastapi.types import UnionType
+from app.schemas.options_schema import BaseOptions, OptionsIn,OptionsHebrew
 from app.schemas.user_schema import UserCreate
 from app.schemas.profile_schema import Profile
 from sqlalchemy.orm import Session
@@ -45,9 +46,8 @@ def sort_heb_file():
     return {"sorted":"true"} """
 
 
-def scrape_from_str_lst(str_lst:list[str], is_fullname:bool, db:Session,options)->dict:
-    
-    headers=create_github_headers()
+def scrape_from_str_lst(str_lst:list[str], is_fullname:bool, db:Session,options: BaseOptions)->dict:
+    headers=create_github_headers(by_api=options.by_api,cookies=options.cookies)
     num_users_added=0
     for name in str_lst:
         i=0
@@ -59,7 +59,7 @@ def scrape_from_str_lst(str_lst:list[str], is_fullname:bool, db:Session,options)
                 url = create_github_fullname_url(firstname,lastname,min_repos=0,page=i+1)
             else:
                 url = create_github_url(name,min_repos=0,page=i+1)
-            users_json = github_service.try_get_users_by_url(url,headers,delay_seconds=10.0,max_retry=6) 
+            users_json = github_service.try_get_users_by_url(url,headers,delay_seconds=10.0,max_retry=6,by_api=options.by_api) 
             num_pages = users_json["payload"]["page_count"] # returns 0 if no user found
             username_lst = users_from_json(users_json) # returns empty list if no user found
             num_users_added+=users_service.create_users_from_lst(db,username_lst)
@@ -67,7 +67,7 @@ def scrape_from_str_lst(str_lst:list[str], is_fullname:bool, db:Session,options)
             print(f"url: {url}, hebrew name:{name}, users:{username_lst}")
             if(num_users_added>options.max_users):
                 return {"users_added":num_users_added}
-            time.sleep(float(options.delay))
+            time.sleep(float(options.delay_seconds))
             i+=1
     return {"users_added":num_users_added}
 
