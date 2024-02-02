@@ -33,7 +33,7 @@ def create_user(db: Session, user: user_schema.UserCreate) -> Optional[user_sche
         db.rollback()
         return None
 
-def create_users_from_lst(db:Session, user_lst : list[str])->int:
+def create_users_from_lst(db:Session, user_lst : list[str])->int: #TODO: add re tries
     num_users_added=0
     for user_str in user_lst:
         try:
