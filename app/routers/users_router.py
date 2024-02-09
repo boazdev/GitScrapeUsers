@@ -23,13 +23,13 @@ def get_user_by_username(username:str, db: Session = Depends(get_db)):
     return users_service.get_user_by_username(db,username)
 
 
-""" @router.post("/",response_model= user_schema.User,status_code=201)
+@router.post("/",response_model= user_schema.User,status_code=201)
 def create_user(username:user_schema.UserCreate, db: Session = Depends(get_db)):
     resp = users_service.create_user(db,username)
     if resp==None:
         raise HTTPException(400,"Username already exist")
     return resp
- """
+
 """ @router.delete("/",response_model=str, status_code=200)
 def delete_all_users(db:Session=Depends(get_db)):
     resp = users_service.delete_all(db)

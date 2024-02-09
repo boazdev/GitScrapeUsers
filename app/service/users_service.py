@@ -1,9 +1,13 @@
+from psycopg2 import OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy import func,text,asc #select, join
 from typing import Optional
 from app.models.user_model import User
 from app.schemas import user_schema
 from sqlalchemy.exc import IntegrityError
+from app.utils.others import alternate_true_false
+from app.utils.others import gen
+from app.utils.sql_utils import SQL_QUERY_DELAY_SECONDS, SQL_QUERY_MAX_RETRY, retry_on_operational_error
 
 def get_users(db: Session, skip: int = 0, limit: int = 100)->list[User]:
     return db.query(User).offset(skip).limit(limit).all()
@@ -15,13 +19,19 @@ def get_users_by_id_greater_than(db: Session, id: int, skip: int = 0, limit: int
     users = query.all()
     return users
 
-def get_user_by_username(db: Session, username: str) -> User: 
+@retry_on_operational_error(SQL_QUERY_MAX_RETRY,SQL_QUERY_DELAY_SECONDS)
+def get_user_by_username(db: Session, username: str) -> User:
+    """ is_should_raise = next(gen)
+    print(f'is should raise: {is_should_raise}')
+    if(is_should_raise):
+        raise OperationalError """
     return db.query(User).filter(User.username == username).first()
 
 
 def get_user_by_id(db: Session, id: str):
     return db.query(User).filter(User.id == id).first()
 
+@retry_on_operational_error(SQL_QUERY_MAX_RETRY,SQL_QUERY_DELAY_SECONDS)
 def create_user(db: Session, user: user_schema.UserCreate) -> Optional[user_schema.User]:
     try:
         db_user = User(**user.model_dump())
@@ -31,26 +41,19 @@ def create_user(db: Session, user: user_schema.UserCreate) -> Optional[user_sche
         return db_user
     except IntegrityError as e: #duplicate username 
         db.rollback()
+        print("Integrity error(user already exist)")
         return None
 
-def create_users_from_lst(db:Session, user_lst : list[str])->int: #TODO: add re tries
-    num_users_added=0
+def create_users_from_lst(db:Session, user_lst : list[str])->int:
+    num_users_added = 0
     for user_str in user_lst:
-        try:
-            db_user_data = {
-                'username': user_str  
-            }
-            db_user = User(**db_user_data)
-            db.add(db_user)
-            db.commit()
-            db.refresh(db_user)
-            num_users_added+=1
-        except IntegrityError as e: #duplicate username 
-            db.rollback()
-            print(f"error adding user , user already exists: {user_str}")
-        except Exception as e:
-            db.rollback()
-            print(f"error adding user {user_str}: {e.__str__()}")
+        user_data = user_schema.UserCreate(username=user_str)  
+        # Convert user_str to a UserCreate object
+        created_user = create_user(db, user_data)
+        if created_user:
+            num_users_added += 1
+        # No need to catch IntegrityError here as it's handled within create_user
+        # OperationalError retries are handled by the decorator
     return num_users_added
 
 def get_num_users(db:Session):

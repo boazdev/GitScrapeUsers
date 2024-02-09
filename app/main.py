@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import users_router,scrape_router, kafka_users_router
+from app.routers import users_router,scrape_router
 from app.settings.config import get_settings
 
 app = FastAPI()

@@ -14,3 +14,10 @@ def fake_data_streamer():
 @router.get("/stream-data")
 async def stream_data():
     return StreamingResponse(fake_video_streamer(), media_type='text/event-stream') """
+
+def alternate_true_false():
+    while True:
+        yield True
+        yield False
+
+gen = alternate_true_false()
