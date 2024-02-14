@@ -1,3 +1,4 @@
+import datetime
 from psycopg2 import OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy import func,text,asc #select, join
@@ -11,7 +12,7 @@ from app.utils.sql_utils import SQL_QUERY_DELAY_SECONDS, SQL_QUERY_MAX_RETRY, re
 
 def get_users(db: Session, skip: int = 0, limit: int = 100)->list[User]:
     return db.query(User).offset(skip).limit(limit).all()
-
+#
 def get_users_by_id_greater_than(db: Session, id: int, skip: int = 0, limit: int = 100)-> list[User]:
     query = db.query(User).filter(User.id >= id)
     query = query.order_by(asc(User.id))
@@ -27,12 +28,27 @@ def get_user_by_username(db: Session, username: str) -> User:
         raise OperationalError """
     return db.query(User).filter(User.username == username).first()
 
+def flag_user(db: Session, username: str) -> Optional[User]:
+    try:
+        # Find the user by username
+        user = db.query(User).filter(User.username == username).first()
+        if user:
+            # Set the is_outlaw field to True
+            user.is_outlaw = True
+            db.commit()  # Commit the changes to the database
+            return user  # Return the updated user object
+        else:
+            return None  # User not found
+    except Exception as e:
+        db.rollback()  # Rollback the transaction in case of any error
+        print(f"Error flagging user as outlaw: {e}")
+        return None
 
 def get_user_by_id(db: Session, id: str):
     return db.query(User).filter(User.id == id).first()
 
 @retry_on_operational_error(SQL_QUERY_MAX_RETRY,SQL_QUERY_DELAY_SECONDS)
-def create_user(db: Session, user: user_schema.UserCreate) -> Optional[user_schema.User]:
+def create_user(db: Session, user: user_schema.User) -> Optional[user_schema.User]:
     try:
         db_user = User(**user.model_dump())
         db.add(db_user)
@@ -41,14 +57,13 @@ def create_user(db: Session, user: user_schema.UserCreate) -> Optional[user_sche
         return db_user
     except IntegrityError as e: #duplicate username 
         db.rollback()
-        print("Integrity error(user already exist)")
+        print(f"Integrity error(user {user.username} already exist)")
         return None
 
 def create_users_from_lst(db:Session, user_lst : list[str])->int:
     num_users_added = 0
     for user_str in user_lst:
-        user_data = user_schema.UserCreate(username=user_str)  
-        # Convert user_str to a UserCreate object
+        user_data = user_schema.UserCreate(username=user_str, is_outlaw=False, created_at=datetime.datetime.now(), updated_at=datetime.datetime(1970, 1, 1))  
         created_user = create_user(db, user_data)
         if created_user:
             num_users_added += 1

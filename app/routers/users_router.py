@@ -15,13 +15,21 @@ import time
 @router.get("/", response_model=dict, status_code=200)
 def get_db_github_users(skip: int = 0, limit: int = 100,db:Session=Depends(get_db)):
     usernames_lst : list[user_schema.User] = users_service.get_users(db, skip,limit)
-    usernames_lst_serial = list(map(lambda x:{"id":x.id, "username":x.username},usernames_lst))
+    usernames_lst_serial = list(map(lambda x:{"id":x.id, "username":x.username, "created_at":x.created_at,
+                                              "update_at":x.updated_at,"is_outlaw":x.is_outlaw},usernames_lst))
     return {"users":usernames_lst_serial, "number_db_users":users_service.get_num_users(db)}
 
 @router.get("/username/{username}",response_model=user_schema.User, status_code=200)
 def get_user_by_username(username:str, db: Session = Depends(get_db)):
     return users_service.get_user_by_username(db,username)
 
+
+@router.post("/flag_user",response_model= user_schema.User,status_code=200)
+def flag_user(user:user_schema.UserCreate, db: Session = Depends(get_db)):
+    resp = users_service.flag_user(db,user.username)
+    if resp==None:
+        raise HTTPException(404,f'Username: {user.username} not found')
+    return resp
 
 @router.post("/",response_model= user_schema.User,status_code=201)
 def create_user(username:user_schema.UserCreate, db: Session = Depends(get_db)):
