@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import sys
 import json
 
@@ -23,13 +24,25 @@ def extract_names_from_file(file_path):
     return names_list
 
 def read_json(file_path):
+    #base_dir = Path(__file__).resolve().parent.parent
+
     file_path = os.path.join(sys.path[0],file_path)
     try:
         with open(file_path, 'r') as file:
             data = json.load(file)
             return data
     except:
-        return None
+        try:
+            print("linux folders")
+            #file_path = os.path.join("code",file_path)
+            #file_path = os.path.join(sys.path[0],file_path)
+            file_path = '/code/app/data/heb_names.json'
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+                return data
+        except Exception as e:
+            print(f'file exception: {e}')
+            return None
     
 def write_json(file_path, key, value):
     file_path = os.path.join(sys.path[0],file_path)
