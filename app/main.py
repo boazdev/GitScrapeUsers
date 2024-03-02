@@ -20,4 +20,4 @@ def health_check():
     return "github users scraper api is running"
 
 settings_obj = get_settings()
-#print(f'settings url: {settings_obj.db_url}')
+print(f'settings url: {settings_obj}')
