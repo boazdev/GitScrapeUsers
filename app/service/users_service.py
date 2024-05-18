@@ -6,6 +6,7 @@ from typing import Optional
 from app.models.user_model import User
 from app.schemas import user_schema
 from sqlalchemy.exc import IntegrityError
+from app.schemas.user_avatar_schema import UserAvatar
 from app.utils.others import alternate_true_false
 from app.utils.others import gen
 from app.utils.sql_utils import SQL_QUERY_DELAY_SECONDS, SQL_QUERY_MAX_RETRY, retry_on_operational_error
@@ -89,3 +90,45 @@ def delete_all(db:Session):
     except Exception as e:
         print(f"delete error: {e.__str__()}")
         return None
+    
+def get_top_100_users_without_avatar(db: Session)->list[dict]:
+    try:
+        # Write the raw SQL query
+        sql_query = text("""
+            SELECT id,username 
+            FROM users_metadata 
+            WHERE avatar = '' 
+            LIMIT 20
+        """)
+        result = db.execute(sql_query).fetchall()
+        usernames = [{'id': row[0], 'username': row[1]} for row in result]
+        
+        return usernames
+    except Exception as e:
+        print(f"Error: {e}")
+        return []
+
+def update_users_in_batch(db: Session, updates: list[UserAvatar]):
+    try:
+        update_query = "UPDATE users_metadata SET avatar = CASE id "
+        guid_query = "guid = CASE id "
+
+        ids = []
+        for update_data in updates:
+            user_id = update_data.id
+            new_avatar = update_data.avatar
+            new_guid = update_data.guid
+
+            update_query += f"WHEN {user_id} THEN '{new_avatar}' "
+            guid_query += f"WHEN {user_id} THEN {new_guid} "
+            ids.append(str(user_id))
+
+        update_query += "END, " + guid_query + "END "
+        update_query += f"WHERE id IN ({', '.join(ids)})"
+        db.execute(text(update_query))
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        print(f"Error: {e}")
+        return False

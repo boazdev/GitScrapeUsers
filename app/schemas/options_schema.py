@@ -29,5 +29,10 @@ class KafkaRequest(BaseModel):
 class KafkaModifyNumPartitionsRequest(BaseModel):
     num_partitions:int = 3
 
+class OptionsDefault(BaseModel):
+    max_users:int = 1000
+    delay_seconds:int = 5
 
+class OptionsSingle(BaseModel):
+    username:str = "art_vandeley"
 

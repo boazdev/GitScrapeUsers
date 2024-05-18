@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends,HTTPException, Response
 from fastapi.types import UnionType
-from app.schemas.options_schema import BaseOptions, OptionsIn,OptionsHebrew
+from app.schemas.options_schema import BaseOptions, OptionsDefault, OptionsIn,OptionsHebrew, OptionsSingle
+from app.schemas.user_avatar_schema import UserAvatar
 from app.schemas.user_schema import UserCreate
 from app.schemas.profile_schema import Profile
 from sqlalchemy.orm import Session
@@ -9,6 +10,7 @@ from app.utils.bruteforce_utils import *
 from app.utils.github_utils import *
 from app.service import git_ranker_service, github_service, file_service, users_service, profiles_service
 import time
+import json
 router = APIRouter(prefix="/scrape", tags=["github users scraper"])
 
 @router.post("/start-bruteforce", response_model=dict, status_code=200) #todo: use app.state BRUTEFORCE
@@ -34,6 +36,45 @@ def start_scrape_linkedin_users(options: OptionsHebrew, db: Session = Depends(ge
     #profiles_list = list(map(lambda profile: profile.name, profiles_list)) #todo:remove special characters from name, handle cases where fullname contains three strings
     users_added = scrape_linkedin_from_profiles_lst(profiles_lst=profiles_list,is_fullname=True,db=db,options=options)
     return users_added
+
+
+@router.post("/fix-avatars",response_model=dict, status_code=200)
+def start_fix_avatars(options: OptionsDefault, db: Session = Depends(get_db)):
+    profiles_list:list[Profile] = profiles_service.get_linkedin_profiles(db)
+    fixed_users_cnt: int = 0
+    while(fixed_users_cnt<options.max_users):
+        usernames:list[dict] = users_service.get_top_100_users_without_avatar(db)
+        updated_users:list[UserAvatar] = []
+        for user in usernames:
+            #user_dict = github_service.get_user_data_by_api(user["username"])
+            user_dict = github_service.get_user_data_by_html(user["username"])
+            if(user_dict!=None):
+                print(f"got user dict from github: {json.dumps(user_dict, indent=4)}")
+                user_avatar = UserAvatar(
+                    id=user["id"],
+                    guid=user_dict.get("guid"),
+                    avatar=user_dict.get("avatar_url"),
+                    username=user["username"]
+                )
+                updated_users.append(user_avatar)
+                fixed_users_cnt+=1
+                print(f'fixed avatar for user:{user_avatar.username}, avatar url: {user_avatar.avatar}')
+            if(fixed_users_cnt>=options.max_users):
+                break
+            print(f'waiting {options.delay_seconds} seconds...')
+            time.sleep(options.delay_seconds)
+        result:bool = users_service.update_users_in_batch(db,updated_users)
+        print(f'result of batch update: {result}')
+        #print(f'updated users dicts: {json.dumps(updated_users, indent=4)}')
+    return {"num_fixed":fixed_users_cnt}        
+
+@router.post("/fix-single-avatar",response_model=dict, status_code=200)
+def start_fix_avatars(options: OptionsSingle, db: Session = Depends(get_db)):
+    user_data: dict = github_service.get_user_data_by_html(options.username)
+    print(f"user_data from html: {json.dumps(user_data,indent=4)}")
+    if user_data==None:
+        return {"result":"failed"}
+    return user_data
 
 """ @router.post("/sort_heb_file", response_model=dict, status_code=200)
 def sort_heb_file():
